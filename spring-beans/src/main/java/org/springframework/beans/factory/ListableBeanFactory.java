@@ -24,6 +24,9 @@ import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 
 /**
+ * 扩展了BeanFactory的接口。
+ * 提供容器中bean迭代的功能,不再需要一个个bean地查找.比如可以一次获取全部的bean,根据类型获取bean.
+ *
  * Extension of the {@link BeanFactory} interface to be implemented by bean factories
  * that can enumerate all their bean instances, rather than attempting bean lookup
  * by name one by one as requested by clients. BeanFactory implementations that
