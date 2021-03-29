@@ -96,6 +96,7 @@ public class ContextLoader {
 	 * Name of servlet context parameter (i.e., {@value}) that can specify the
 	 * config location for the root context, falling back to the implementation's
 	 * default otherwise.
+	 * web.xml 配置文件中的参数，供 ContextLoaderListener 读取使用
 	 * @see org.springframework.web.context.support.XmlWebApplicationContext#DEFAULT_CONFIG_LOCATION
 	 */
 	public static final String CONFIG_LOCATION_PARAM = "contextConfigLocation";

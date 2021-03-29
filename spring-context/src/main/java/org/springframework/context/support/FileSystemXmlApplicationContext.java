@@ -52,6 +52,9 @@ import org.springframework.lang.Nullable;
  * @see #getResource
  * @see #getResourceByPath
  * @see GenericApplicationContext
+ *
+ * 基于 XML 配置
+ *
  */
 public class FileSystemXmlApplicationContext extends AbstractXmlApplicationContext {
 
