@@ -301,6 +301,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 
 	/**
 	 * Load bean definitions from the specified XML file.
+	 * 从指定的XML文件加载bean定义
 	 * @param resource the resource descriptor for the XML file
 	 * @return the number of bean definitions found
 	 * @throws BeanDefinitionStoreException in case of loading or parsing errors
@@ -331,10 +332,12 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 		}
 
 		try (InputStream inputStream = encodedResource.getResource().getInputStream()) {
+			// 把xml文件流封装为InputSource对象
 			InputSource inputSource = new InputSource(inputStream);
 			if (encodedResource.getEncoding() != null) {
 				inputSource.setEncoding(encodedResource.getEncoding());
 			}
+			// 执行加载逻辑
 			return doLoadBeanDefinitions(inputSource, encodedResource.getResource());
 		}
 		catch (IOException ex) {
@@ -387,7 +390,9 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 			throws BeanDefinitionStoreException {
 
 		try {
+			// 读取xml信息，将xml信息保存到Document对象
 			Document doc = doLoadDocument(inputSource, resource);
+			// 解析Document对象，封装成BeanDefinition对象，并进行注册
 			int count = registerBeanDefinitions(doc, resource);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Loaded " + count + " bean definitions from " + resource);
@@ -506,9 +511,12 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * @see BeanDefinitionDocumentReader#registerBeanDefinitions
 	 */
 	public int registerBeanDefinitions(Document doc, Resource resource) throws BeanDefinitionStoreException {
+		// 创建BeanDefinitionDocumentReader读取器对象。（默认实现DefaultBeanDefinitionDocumentReader）
 		BeanDefinitionDocumentReader documentReader = createBeanDefinitionDocumentReader();
 		int countBefore = getRegistry().getBeanDefinitionCount();
+		// 注册BeanDefinition
 		documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
+		// 返回新增的BeanDefinition对象
 		return getRegistry().getBeanDefinitionCount() - countBefore;
 	}
 
@@ -532,6 +540,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 
 	/**
 	 * Lazily create a default NamespaceHandlerResolver, if not set before.
+	 * 获取xml命名空间处理器（spring.handler)
 	 * @see #createDefaultNamespaceHandlerResolver()
 	 */
 	public NamespaceHandlerResolver getNamespaceHandlerResolver() {
