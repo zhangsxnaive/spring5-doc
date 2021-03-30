@@ -346,6 +346,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 	@Override
 	public <T> T getBean(Class<T> requiredType, @Nullable Object... args) throws BeansException {
 		Assert.notNull(requiredType, "Required type must not be null");
+		// 处理bean
 		Object resolved = resolveBean(ResolvableType.forRawClass(requiredType), args, false);
 		if (resolved == null) {
 			throw new NoSuchBeanDefinitionException(requiredType);
@@ -924,6 +925,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			// 合并父BeanDefinition对象
 			// map.get(beanName)
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			// 如果定义不是为单例，也不是延迟加载的bean，先不加载
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
 				if (isFactoryBean(beanName)) {
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
