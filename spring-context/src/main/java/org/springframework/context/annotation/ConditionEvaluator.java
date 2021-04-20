@@ -56,6 +56,7 @@ class ConditionEvaluator {
 	public ConditionEvaluator(@Nullable BeanDefinitionRegistry registry,
 			@Nullable Environment environment, @Nullable ResourceLoader resourceLoader) {
 
+		// 实际上是委托给内部类ConditionContextImpl
 		this.context = new ConditionContextImpl(registry, environment, resourceLoader);
 	}
 
@@ -147,10 +148,15 @@ class ConditionEvaluator {
 		public ConditionContextImpl(@Nullable BeanDefinitionRegistry registry,
 				@Nullable Environment environment, @Nullable ResourceLoader resourceLoader) {
 
+			// 再说一遍，registry的实际类型就是 AnnotationConfigApplicationCont
 			this.registry = registry;
+			// 获取beanFactory，我们也知道了beanFactory其实就是 ConfigurableListableBeanFactory
 			this.beanFactory = deduceBeanFactory(registry);
+			// 从容器中获取environment，前面介绍过，容器中的environment的封装类是 StandardEnvironment
 			this.environment = (environment != null ? environment : deduceEnvironment(registry));
+			// 资源加载器. 通过UML类图可以发现,resourceLoader就是容器, 因为容器间接继承了ResourceLoader
 			this.resourceLoader = (resourceLoader != null ? resourceLoader : deduceResourceLoader(registry));
+			// 类加载器. 实际上就是获取beanFactory的类加载器。理应如此，容器当中的类加载器肯定要一致才行
 			this.classLoader = deduceClassLoader(resourceLoader, this.beanFactory);
 		}
 

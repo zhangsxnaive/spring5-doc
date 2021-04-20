@@ -69,8 +69,26 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 */
 	public AnnotationConfigApplicationContext() {
 		StartupStep createAnnotatedBeanDefReader = this.getApplicationStartup().start("spring.context.annotated-bean-reader.create");
+
+		/*
+		 * 1.创建并设置容器当中的Environment属性。即默认为StandardEnvironment类。
+		 * 2.创建并设置容器当中的条件解析器,即ConditionEvaluator，其内部实际委托给内部类ConditionContextImpl。
+		 * 3.注册6个后置处理器到容器当中。注意这里仅是生成了后置处理器的BeanDefinition。还并没有进行bean解析和后置处理的执行。
+		 *
+		 * 创建一个读取注解的Bean定义读取器
+		 * 什么是bean定义？BeanDefinition
+		 * 完成了spring内部BeanDefinition的注册（主要是后置处理器）
+		 * 此方法中会注册一些BeanFactoryPostProcessor来处理注解相关的配置
+		 */
 		this.reader = new AnnotatedBeanDefinitionReader(this);
 		createAnnotatedBeanDefReader.end();
+
+		/*
+		 * 创建BeanDefinition扫描器
+		 * 可以用来扫描包或者类，继而转换为bd
+		 * 它最主要的目的就是扫描类路径下所有的class文件能否解析为bd
+		 *
+		 */
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -91,8 +109,13 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * {@link Configuration @Configuration} classes
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
+		// 调用默认的构造方法，进行容器的准备
+		// 1. 由父类构造器生成一个DefaultListableBeanFactory对象
+		// 2. 定义 BD 读取器和扫描器
 		this();
+		// 基于配置类注册相关信息
 		register(componentClasses);
+		// 刷新容器
 		refresh();
 	}
 

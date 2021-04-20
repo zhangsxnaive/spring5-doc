@@ -1,6 +1,7 @@
 import com.springframework.zhangsx.MyBean;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
@@ -13,6 +14,7 @@ public class IocTest {
 	@Test
 	public void testIoc() {
 		ApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:applicationContext.xml");
+		AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext(MyBean.class);
 		MyBean bean = applicationContext.getBean(MyBean.class);
 	}
 
