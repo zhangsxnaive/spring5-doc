@@ -233,6 +233,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 */
 	@Override
 	public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+		// 判断是否已经针对此容器进行初始化过
 		int registryId = System.identityHashCode(registry);
 		if (this.registriesPostProcessed.contains(registryId)) {
 			throw new IllegalStateException(
@@ -243,7 +244,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					"postProcessBeanFactory already called on this post-processor against " + registry);
 		}
 		this.registriesPostProcessed.add(registryId);
-
+		// 是核心方法
 		processConfigBeanDefinitions(registry);
 	}
 
@@ -259,12 +260,14 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					"postProcessBeanFactory already called on this post-processor against " + beanFactory);
 		}
 		this.factoriesPostProcessed.add(factoryId);
+		// 判断factoryId是否改变,如果改变,重新走一遍
 		if (!this.registriesPostProcessed.contains(factoryId)) {
 			// BeanDefinitionRegistryPostProcessor hook apparently not supported...
 			// Simply call processConfigurationClasses lazily at this point then.
 			processConfigBeanDefinitions((BeanDefinitionRegistry) beanFactory);
 		}
 
+		// 使用Cglib动态代理来增强配置类. 重要!!!
 		enhanceConfigurationClasses(beanFactory);
 		beanFactory.addBeanPostProcessor(new ImportAwareBeanPostProcessor(beanFactory));
 	}
@@ -274,27 +277,42 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * {@link Configuration} classes.
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
+		// 用于盛放解析出来的config类的bdh
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
+		// 从容器中获取所有bd name,在这里获取到的只有7个(Spring内部6个,自己的配置类1个.)
+		// 注：不同的版本可能不一样 zhangsx
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
+		// 循环遍历, 不放过任何一个符合条件的bd(实际上只有自己的配置类符合条件)
 		for (String beanName : candidateNames) {
+			// 根据beanName获取bd
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
+			// 判断是否已经被判定为configurationClass.
+			// 从ConfigurationClassUtils类可知,如果是判断是否是configurationClass的话,该属性不为空.
+			// 而刚进入到这里时,其属性一定为空,因此会走else if分支进一步判断
 			if (beanDef.getAttribute(ConfigurationClassUtils.CONFIGURATION_CLASS_ATTRIBUTE) != null) {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}
+			// 校验当前beanDef是否符合config候选条件. 具体如下:
+			// 1.如果有@Configuration注解,则为beanDef添加属性 CONFIGURATION_CLASS_FULL,表示是一个完全配置类.
+			// 2.如果没有@Configuration但是有@Bean/@Import等注解,则为beanDef添加属性 CONFIGURATION_CLASS_LITE,表示是一个简单的配置类.
+			// 3.以上两点只要满足一点,就会返回true,如果二者都没有,则返回false
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
 		}
 
 		// Return immediately if no @Configuration classes were found
+		// 经过遍历判断之后, 如果候选集合为空,则直接返回.
 		if (configCandidates.isEmpty()) {
 			return;
 		}
 
 		// Sort by previously determined @Order value, if applicable
+		// 根据排序的值进行排序. 从UML类图可以得知,它实现了 @Ordered接口
+		// 题外话: 排序值的设置可以通过@Order设置也可通过实现Ordered接口或者PriorityOrdered接口重写getOrder来实现
 		configCandidates.sort((bd1, bd2) -> {
 			int i1 = ConfigurationClassUtils.getOrder(bd1.getBeanDefinition());
 			int i2 = ConfigurationClassUtils.getOrder(bd2.getBeanDefinition());
@@ -302,6 +320,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		});
 
 		// Detect any custom bean name generation strategy supplied through the enclosing application context
+		// 确定 bean name生成器, 简单,继续往下
 		SingletonBeanRegistry sbr = null;
 		if (registry instanceof SingletonBeanRegistry) {
 			sbr = (SingletonBeanRegistry) registry;
@@ -315,17 +334,29 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			}
 		}
 
+		// 设置environment
 		if (this.environment == null) {
 			this.environment = new StandardEnvironment();
 		}
 
 		// Parse each @Configuration class
+		// 创建@Configuration 的解析器
 		ConfigurationClassParser parser = new ConfigurationClassParser(
 				this.metadataReaderFactory, this.problemReporter, this.environment,
 				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
 
+		// 将所有待解析的数组放在set集合中,达到去重的目的
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
+
+		// 将解析完成的beanDef放在这个集合中
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
+
+		// 递归解析 重要!!!
+		// 采用do...while的方式, 因为在解析的过程中,可能会发现新的需要解析的@Configuration class.
+		// 比如在解析出来的bean当中也有打上@Configuration注解的.这时需要重新比较所有的beanDef和已解析的beanDef来筛选出
+		// 新发现的Configuration class,并将其添加到候选集合中, 这样while的判断成立,将会进行新的一轮解析.
+		// 周而复始,直到将所有的@Configuration class解析完.
+		// 完成这一切的关键就在于解析器的parse方法!
 		do {
 			StartupStep processConfig = this.applicationStartup.start("spring.context.config-classes.parse");
 			parser.parse(candidates);
@@ -386,6 +417,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 */
 	public void enhanceConfigurationClasses(ConfigurableListableBeanFactory beanFactory) {
 		StartupStep enhanceConfigClasses = this.applicationStartup.start("spring.context.config-classes.enhance");
+
+		// 找到所有配置类
 		Map<String, AbstractBeanDefinition> configBeanDefs = new LinkedHashMap<>();
 		for (String beanName : beanFactory.getBeanDefinitionNames()) {
 			BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
@@ -417,6 +450,8 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					}
 				}
 			}
+
+			// 判断是否是"完全"配置类,即@Configuration的配置类
 			if (ConfigurationClassUtils.CONFIGURATION_CLASS_FULL.equals(configClassAttr)) {
 				if (!(beanDef instanceof AbstractBeanDefinition)) {
 					throw new BeanDefinitionStoreException("Cannot enhance @Configuration bean definition '" +
@@ -431,12 +466,14 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				configBeanDefs.put(beanName, (AbstractBeanDefinition) beanDef);
 			}
 		}
+		// 没有"full"配置类,则直接返回
 		if (configBeanDefs.isEmpty() || NativeDetector.inNativeImage()) {
 			// nothing to enhance -> return immediately
 			enhanceConfigClasses.end();
 			return;
 		}
 
+		// 对"full"配置类进行增强,改变它的beanClass
 		ConfigurationClassEnhancer enhancer = new ConfigurationClassEnhancer();
 		for (Map.Entry<String, AbstractBeanDefinition> entry : configBeanDefs.entrySet()) {
 			AbstractBeanDefinition beanDef = entry.getValue();

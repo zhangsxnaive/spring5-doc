@@ -275,9 +275,14 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 */
 	protected Set<BeanDefinitionHolder> doScan(String... basePackages) {
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
+		// 初始化一个bd set,用于盛放即将扫描并解析出来的bd!
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
+			// 重要!!! 该方法便是去读取包路径下的资源,并解析出该包下所有符合条件的类生成bd.
+			// 本质上还是通过流的方式读取class文件然后对class对象进行解析并生成bd的.
+			// 看似高深莫测,实则 大道至简
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
+			// 对当前包下的bd进行遍历加工,然后注册到BeanFactory中去!
 			for (BeanDefinition candidate : candidates) {
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
