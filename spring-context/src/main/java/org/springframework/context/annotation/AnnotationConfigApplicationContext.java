@@ -191,6 +191,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		Assert.notEmpty(componentClasses, "At least one component class must be specified");
 		StartupStep registerComponentClass = this.getApplicationStartup().start("spring.context.component-classes.register")
 				.tag("classes", () -> Arrays.toString(componentClasses));
+		// 实际上是委托给AnnotatedBeanDefinitionReader类来注册
 		this.reader.register(componentClasses);
 		registerComponentClass.end();
 	}
